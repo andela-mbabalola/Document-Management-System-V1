@@ -1,0 +1,27 @@
+{
+  "name": "DMS",
+  "version": "1.0.0",
+  "description": "system used to manage documents, users and user roles",
+  "main": "dms.js",
+  "scripts": {
+    "test": "jasmine-node  --captureExceptions --forceexit --verbose --growl documentManagerSpec.js"
+  },
+  "preferGlobal": true,
+  "bin": {
+    "dms": "bin/dms.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andela-mbabalola"
+  },
+  "author": "Babalola Maryam",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^2.9.0",
+    "express": "^4.13.3",
+    "pg": "^4.4.3",
+    "prettyjson": "^1.1.3",
+    "sequelize": "^3.13.0",
+    "sequelize-cli": "^2.1.0"
+  }
+}
