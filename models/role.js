@@ -9,7 +9,7 @@ module.exports = function(sequelize, DataTypes) {
     classMethods: {
       associate: function(models) {
         // associations can be defined here
-        Role.belongsTo(models.User, {
+        Role.hasMany(models.User, {
           as: 'User'
         });
         Role.belongsToMany(models.Document, {

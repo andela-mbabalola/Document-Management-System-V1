@@ -2,8 +2,11 @@
   'use strict';
 })();
 
-var _strftime = require ("strftime"),
-	_models = require ("./models");
+var	_models = require ("./models");
+function strip (obj) {
+	return obj.dataValues;
+}
+
 
 /**
  * [createUser: create/insert user into the database]
@@ -59,21 +62,40 @@ var createUser = function (firstName, lastName, userName, email, password, role,
 // });
 
 /**
- * [createRole: creat/insert role into the database]
+ * [createRole: create/insert role into the database]
  * @param  {[string]} title [name of the role]
  * @return {[string]}  successfully created/inserted role     [Role successfully created/inserted into the database]
  */
-exports.createRole = function (title, cb) {
-	var newRole = {
-		title: title
-	};
-	_models.Role.findOrCreate ({
-		where: newRole
-	}).then (function () {
-		cb("Role " + title + " successfully created", null);
+var createRole = function (title, cb) {
+	_models.Role.findOne ({
+		where: {
+			title: title
+		}
+	}).then (function (role) {
+		if (!role) {
+			var newRole = {
+				title: title
+			};
+			_models.Role.create(newRole, function (err, role) {
+				if (err) {
+					cb(err, null);
+				} else {
+					cb(null, role);
+				}
+			});
+		} else {
+			cb("Role exists", null);
+		}
 	});
 };
-//createRole ("Administrator");
+
+// createRole ("doc", function (err, role) {
+// 	if (err) {
+// 		console.log(err);
+// 	} else {
+// 		console.log("Created Role");
+// 	}
+// });
 
 /**
  * [createRole: create/insert role into the database]
@@ -83,57 +105,87 @@ exports.createRole = function (title, cb) {
  * @param  {[string]} role [roles with access to the doc]
  * @return {[string]}  successfully created/inserted document     [Document successfully created/inserted into the database]
  */
-// exports.createDocument = function (title, content, userName, roles) {
-// 	_models.User.findOne ({
-// 		where: {
-// 			userName: userName
-// 		}
-// 	}).then (function (user) {
-// 		if (user) {
-// 			console.log(user);
-// 			_models.Role.findOrCreate ({
-// 				where: {
-// 					title: {
-// 						$in: roles
-// 					}
-// 				}
-// 			}).then (function (roles) {
-// 				var newDocument = {
-// 					title: title,
-// 					content: content,
-// 					UserId: user.id
-// 				}
-//
-// 				_models.Document.create (newDocument);
-// 				console.log ("Document " + title + " successfully created");
-// 				_models.Document.addRoles(roles);
-// 				console.log ("Roles added");
-// 			});
-// 		} else {
-// 			console.log ("Document " + title + " failed to create");
-// 		}
-// 	});
-// }
-//createDocument("mydoc", "maryam is a girl", "yhemmy",["Administrator", "superAdministrator"]);
+var createDocument = function (title, content, userName, roles, cb) {
+	_models.Document.findOne({
+		where: {
+			title : title
+		}
+	}).then(function (document) {
+		if (!document) {
+			_models.User.findOne ({
+				where: {
+					userName: userName
+				}
+			}).then (function (user) {
+				console.log(user);
+				if (user) {
+					_models.Role.findAll ({
+						where: {
+							title: {
+								$in: roles
+							}
+						}
+					}).then(function (_roles) {
+						var newDocument = {
+							title: title,
+							content: content,
+							UserId: user.id
+						};
+						_models.Document.create(newDocument).then(function (doc) {
+								// console.log(doc);
+								doc.setRoles(_roles).then(function(){
+									_roles.forEach(function(role){
+										role.addDocument(doc).then(function() {
+										});
+									});
+								});
+								cb("Roles added", null);
+						});
+						cb(null, doc);
+					});
+				} else {
+					console.log ("Document " + title + " failed to create");
+				}
+			});
+		} else {
+			cb ("Document exists", null);
+		}
+	});
+};
+
+// createDocument("mydoc", "maryam is a girl", "law",["Administrator", "superAdministrator"], function (err, doc) {
+// 	if (err) {
+// 		console.log(err);
+// 	} else {
+// 		console.log(doc);
+// 	}
+// });
 
 /**
  * [getAllUsers: returns all exisitng users in the database]
  * @return {[object]} [all the users available in the database]
  */
-exports.getAllUsers = function (cb) {
+var getAllUsers = function (cb) {
 	_models.User.findAll ().then ( function (users) {
 		if (!users)
 			cb ("user does not exist", null);
 		cb (null, users);
 	});
 };
-//getAllUsers();
+
+// getAllUsers(function (err, users) {
+// 	if (err) {
+// 		console.log(err);
+// 	} else {
+// 		console.log(users);
+// 	}
+// });
 
 /**
  * [getAllRoles: returns all exisitng roles in the database]
  * @return {[object]} [all exisitng roles in the database]
  */
-exports.getAllRoles = function (cb) {
+var getAllRoles = function (cb) {
 	_models.Role.findAll (). then ( function (roles) {
 		if(!roles){
 			cb("role does not exist", null);
@@ -142,14 +194,20 @@ exports.getAllRoles = function (cb) {
 	});
 };
 
-//getAllRoles();
+// getAllRoles(function (err, role) {
+// 	if (err) {
+// 		console.log(err);
+// 	} else {
+// 		console.log(role);
+// 	}
+// });
 
 /**
  * [getAllDocuments: returns all exisitng documents in the database within the specified limit]
  * @param  {[integer]} limit [number of documents that should be returned]
  * @return {[object]}       [exisitng documents in the database within the specified limit]
  */
-exports.getAllDocuments = function (limit, cb) {
+var getAllDocuments = function (limit, cb) {
 	var getDocuments = {
 		limit: limit,
 		order: [
@@ -163,10 +221,16 @@ exports.getAllDocuments = function (limit, cb) {
 		cb(null, documents);
 	});
 };
-//getAllDocuments(2);
+// getAllDocuments(4, function (err, doc) {
+// 	if (err) {
+// 		console.log(err);
+// 	} else {
+// 		console.log(doc);
+// 	}
+// });
 
 /**
- * [getAllDocumentsByDate: exisitng documents in the database within the specified role/limit]
+ * [getAllDocumentsByRole: exisiting documents in the database within the specified role/limit]
  * @param  {[string]} role  [description]
  * @param  {[int]} limit [number of documents that should be returned]
  * @return {[object]}       [exisitng documents in the database within the specified date/limit]
